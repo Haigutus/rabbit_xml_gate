@@ -1,0 +1,1 @@
+pipenv run gunicorn RABBITMQ_GATE:application --workers 4 --bind=0.0.0.0:80 #--daemon # --certfile=fullchain.pem --key=privatekey.pem
