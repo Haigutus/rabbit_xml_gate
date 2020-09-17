@@ -36,7 +36,7 @@ def create_connection(username, password, host, port, virtual_host, logger):
         # Add status debug info
         info_message = f"Connection made to {host}:{port} for {username}"
         logger.info(info_message)
-        connection_result["info"] = info_message
+        connection_result["connection_info"] = info_message
 
     except Exception as error:
 
@@ -47,7 +47,7 @@ def create_connection(username, password, host, port, virtual_host, logger):
         # Add status debug info
         info_message = f'Failed to create connection to {host}:{port} for {username} -> {error}'
         logger.error(info_message)
-        connection_result["info"] = info_message
+        connection_result["connection_info"] = info_message
 
     return connection_result
 
@@ -68,7 +68,7 @@ def send_message(message, url, virtual_host, routing_key, logger, username="ques
     channel = connection_status["channel"]
 
     # Connection status info
-    message_info["connection_info"] = connection_status["info"]
+    message_info.update(connection_status)
 
     if connection:
 
@@ -88,7 +88,7 @@ def send_message(message, url, virtual_host, routing_key, logger, username="ques
                                   mandatory=True)
 
             logger.info('Message sent - Routing OK')
-            message_info["routed"] = False
+            message_info["routed"] = True
 
         except pika.exceptions.UnroutableError:
 
@@ -105,7 +105,7 @@ def get_message(que, url, virtual_host, logger, username="quest", password="ques
 
     # Object to keep message info
     message_info = {"que_name": que,
-                    "body": ""}
+                    "body": None}
 
     # Create connection and channel
     connection_status = create_connection(username, password, url, port, virtual_host, logger)
@@ -114,7 +114,7 @@ def get_message(que, url, virtual_host, logger, username="quest", password="ques
     channel = connection_status["channel"]
 
     # Connection status info
-    message_info["connection_info"] = connection_status["info"]
+    message_info.update(connection_status)
 
     if connection:
 
@@ -144,7 +144,7 @@ def get_message(que, url, virtual_host, logger, username="quest", password="ques
             message_info["body"] = body.decode()
         else:
             logger.warning("Empty message returned")
-            message_info["body"] = ""
+            message_info["body"] = None
 
         if method_frame:
             message_info["header_frame"] = header_frame.__dict__

@@ -10,6 +10,7 @@
 #-------------------------------------------------------------------------------
 
 import os
+import sys
 import base64
 import configparser
 import logging
@@ -37,6 +38,10 @@ if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
     application.logger.handlers = gunicorn_logger.handlers
     application.logger.setLevel(gunicorn_logger.level)
+
+else:
+    #logger = logging.getLogger()
+    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 
 # SETTINGS - START
@@ -96,7 +101,7 @@ class SendXML(Resource):
         """Add XML file as plain text/xml to the POST body"""
 
         # Use only for DEBUG, contains log who accessed and from where
-        application.logger.debug(f"FROM:{request.remote_user}@{request.remote_addr} "
+        application.logger.info(f"FROM:{request.remote_user}@{request.remote_addr} "
                                  f"METHOD:{request.method} "
                                  f"HEADERS:{dict(request.headers)}")
 
@@ -119,11 +124,19 @@ class SendXML(Resource):
 
         status["user"] = username
 
-        if status["routed"]:
+
+
+        if status["routed"] and status["connection"]:
             application.logger.info(status)
         else:
             application.logger.error(status)
+            status.pop("connection")
+            status.pop("channel")
+
             abort(400, status)
+
+        status.pop("connection")
+        status.pop("channel")
 
         return status
 
@@ -143,7 +156,7 @@ class GetXML(Resource):
         """Get XML file as plain text/xml in the GET response body"""
 
         # Use only for DEBUG, contains log who accessed and from where
-        application.logger.debug(f"FROM:{request.remote_user}@{request.remote_addr} "
+        application.logger.info(f"FROM:{request.remote_user}@{request.remote_addr} "
                                  f"METHOD:{request.method} "
                                  f"HEADERS:{dict(request.headers)} ")
 
@@ -161,7 +174,16 @@ class GetXML(Resource):
 
         message = amqp_API.get_message(args["queue_name"], server, vhost, application.logger, username, password, port=port, auto_ack=True)
 
-        return message["body"]
+        if message["connection"]:
+            application.logger.info(message)
+            return message["body"]
+
+        else:
+            application.logger.error(message)
+            message.pop("connection")
+            message.pop("channel")
+            abort(400, message)
+            return message
 
 
 if __name__ == '__main__':
